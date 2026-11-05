@@ -1,0 +1,57 @@
+/* V2: mobile-first layout. The stage keeps the camera's aspect ratio (set from main.js). */
+:root { color-scheme: dark; }
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+body { margin: 0; background: #0b1020; color: #d7e3ff; font-family: system-ui, sans-serif; }
+#app { max-width: 720px; margin: 0 auto; padding: 8px 10px calc(24px + env(safe-area-inset-bottom)); }
+header { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
+h1 { margin: 0; letter-spacing: 6px; color: #00e5ff; font-size: 1.3rem; }
+#status { flex: 1; font-size: 0.75rem; opacity: 0.8; text-align: right; }
+
+#stage { position: relative; width: 100%; aspect-ratio: 4 / 3; margin: 0 auto; background: #000; border: 1px solid #1c2a4a; border-radius: 10px; overflow: hidden; }
+#video, #overlay { position: absolute; inset: 0; width: 100%; height: 100%; transform: scaleX(-1); }
+#target-canvas { position: absolute; left: 50%; top: 52%; width: min(78%, 460px); transform: translate(-50%, -50%); pointer-events: none; opacity: 0.92; }
+
+#time-track { position: absolute; top: 0; left: 0; right: 0; height: 8px; background: rgba(0,0,0,0.5); }
+#time-fill { height: 100%; width: 100%; background: #00e5ff; transition: width 0.1s linear; }
+#time-fill.low { background: #ff5d5d; }
+#hold-track { position: absolute; bottom: 0; left: 0; right: 0; height: 6px; background: rgba(0,0,0,0.5); }
+#hold-fill { height: 100%; width: 0; background: #4dff88; }
+
+#hud { position: absolute; top: 14px; left: 10px; right: 10px; text-shadow: 0 0 6px #000; pointer-events: none; }
+#target-name { font-weight: 700; font-size: clamp(1rem, 4.5vw, 1.4rem); }
+#hand-hint { font-size: 0.85rem; color: #ffd36b; }
+#score-chip { position: absolute; top: 14px; right: 10px; font-weight: 700; font-size: 1.1rem; background: rgba(0,0,0,0.55); padding: 2px 10px; border-radius: 12px; }
+#result { position: absolute; top: 40%; left: 0; right: 0; text-align: center; font-size: clamp(1.4rem, 7vw, 2.4rem); font-weight: 800; text-shadow: 0 0 10px #000; pointer-events: none; }
+#result.ok { color: #4dff88; }
+#result.bad { color: #ff5d5d; }
+#agent-message { position: absolute; bottom: 12px; left: 8px; right: 8px; text-align: center; font-size: 0.8rem; background: rgba(0,0,0,0.55); border-radius: 8px; padding: 4px 8px; }
+
+#controls { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+.panel { background: #111a33; border: 1px solid #1c2a4a; border-radius: 10px; padding: 10px; margin-bottom: 10px; }
+summary { cursor: pointer; font-weight: 600; }
+.row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.small { font-size: 0.85rem; margin-bottom: 6px; }
+.tiny { font-size: 0.7rem; opacity: 0.7; margin-top: 3px; }
+.bar { height: 8px; background: #1c2a4a; border-radius: 4px; overflow: hidden; }
+.fill { height: 100%; background: #00e5ff; width: 0; transition: width 0.2s; }
+.fill.amber { background: #ffb300; }
+.frow { display: grid; grid-template-columns: 62px 1fr; gap: 6px; align-items: center; font-size: 0.8rem; margin-top: 4px; }
+.buttons { display: flex; flex-wrap: wrap; gap: 6px; }
+button, select { background: #1c2a4a; color: #d7e3ff; border: 1px solid #2c4170; border-radius: 8px; padding: 10px 12px; font-size: 0.9rem; cursor: pointer; }
+button.primary { background: #007c91; border-color: #00e5ff; font-weight: 700; }
+button:active { background: #26396a; }
+select { max-width: 100%; }
+label { display: block; font-size: 0.8rem; margin: 6px 0; }
+
+#collection { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; margin-top: 8px; }
+.card { padding: 4px; text-align: center; background: #0b1020; }
+.card canvas { width: 100%; border-radius: 6px; display: block; }
+.card.locked { opacity: 0.6; }
+.card-label { font-size: 0.72rem; margin-top: 3px; }
+
+table { width: 100%; border-collapse: collapse; font-size: 0.78rem; margin-top: 8px; }
+th, td { text-align: left; padding: 3px 4px; border-bottom: 1px solid #1c2a4a; }
+
+dialog { background: #111a33; color: #d7e3ff; border: 1px solid #2c4170; border-radius: 12px; max-width: 360px; width: 92%; }
+dialog::backdrop { background: rgba(0,0,0,0.7); }
+#modal-canvas { width: 100%; background: #0b1020; border-radius: 8px; }

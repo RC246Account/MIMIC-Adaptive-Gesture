@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0b1020" />
+    <title>MIMIC</title>
+  </head>
+  <body>
+    <div id="app">
+      <header>
+        <h1>MIMIC</h1>
+        <div id="status">Loading...</div>
+        <button id="btn-sound">Sound: on</button>
+      </header>
+
+      <!-- Game stage: camera + live skeleton + big target pose that fills up as you match it -->
+      <section id="stage">
+        <video id="video" autoplay playsinline muted></video>
+        <canvas id="overlay"></canvas>
+        <canvas id="target-canvas" width="640" height="480"></canvas>
+        <div id="time-track"><div id="time-fill"></div></div>
+        <div id="hud">
+          <div id="target-name">Press Start</div>
+          <div id="hand-hint"></div>
+        </div>
+        <div id="score-chip"><span id="score-value">--</span></div>
+        <div id="result"></div>
+        <div id="hold-track"><div id="hold-fill"></div></div>
+        <div id="agent-message">Enable the camera, then press Start.</div>
+      </section>
+
+      <section id="controls">
+        <button id="btn-camera">Enable Camera</button>
+        <select id="mode-select">
+          <option value="campaign">Campaign</option>
+          <option value="practice">Practice</option>
+        </select>
+        <select id="level-select" hidden></select>
+        <button id="btn-start" class="primary">Start</button>
+        <button id="btn-stop">Stop</button>
+      </section>
+
+      <section class="panel" id="progress">
+        <div class="row small">
+          <span>Level <b id="level">1</span>
+          <span>Points <b id="points">0</span>
+          <span>Streak <b id="streak">0</span>
+          <span>Accuracy <b id="accuracy">--</span>
+        </div>
+        <div class="bar"><div id="level-fill" class="fill"></div></div>
+        <div id="level-label" class="tiny"></div>
+      </section>
+
+      <details class="panel" open>
+        <summary>Pose collection</summary>
+        <div id="collection"></div>
+      </details>
+
+      <details class="panel">
+        <summary>My stats and weak spots</summary>
+        <div id="stats"></div>
+      </details>
+
+      <section class="panel buttons">
+        <button id="btn-log">Export session log</button>
+        <button id="btn-reset">Reset my progress</button>
+      </section>
+
+      <!-- Developer tools: only visible with npm run dev or ?dev=1 -->
+      <details class="panel" id="dev-panel" hidden>
+        <summary>Developer: capture poses</summary>
+        <select id="pose-select"></select>
+        <label>Hand used for this capture
+          <select id="hand-select">
+            <option value="right">Right hand</option>
+            <option value="left">Left hand</option>
+          </select>
+        </label>
+        <div class="buttons">
+          <button id="btn-capture">Capture (3s countdown)</button>
+          <button id="btn-export-poses">Export poses.json</button>
+        </div>
+      </details>
+    </div>
+
+    <dialog id="pose-modal">
+      <h3 id="modal-title"></h3>
+      <canvas id="modal-canvas" width="320" height="240"></canvas>
+      <p id="modal-body"></p>
+      <button id="modal-close">Close</button>
+    </dialog>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

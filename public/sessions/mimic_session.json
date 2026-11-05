@@ -1,0 +1,325 @@
+{
+  "config": {
+    "K": 0.6,
+    "PASS_SCORE": 75,
+    "HOLD_FRAMES": 10,
+    "TIMEOUT_MS": 15000,
+    "RESULT_PAUSE_MS": 1200,
+    "CAPTURE_FRAMES": 30,
+    "CAPTURE_DELAY_MS": 3000,
+    "EPSILON": 0.1,
+    "EMA_ALPHA": 0.3,
+    "LEVEL_WEIGHT": 1,
+    "NOVELTY_PENALTY": 0.15
+  },
+  "trackingSuccessRate": 0.7286641929499073,
+  "meanFrameMs": 49.466083236516845,
+  "p95FrameMs": 67.60000002384186,
+  "meanDecisionMs": 0.05000000298023224,
+  "rounds": [
+    {
+      "poseId": "open_palm",
+      "category": "basic",
+      "difficulty": 1,
+      "passed": true,
+      "score": 93,
+      "timeMs": 2804,
+      "levelAfter": 1,
+      "fingerWeakness": [
+        0.399,
+        0.41,
+        0.406,
+        0.43,
+        0.442
+      ]
+    },
+    {
+      "poseId": "rock",
+      "category": "finger_control",
+      "difficulty": 2,
+      "passed": true,
+      "score": 83,
+      "timeMs": 9516,
+      "levelAfter": 1,
+      "fingerWeakness": [
+        0.399,
+        0.368,
+        0.406,
+        0.43,
+        0.379
+      ]
+    },
+    {
+      "poseId": "three_up",
+      "category": "finger_control",
+      "difficulty": 2,
+      "passed": true,
+      "score": 76,
+      "timeMs": 2773,
+      "levelAfter": 1,
+      "fingerWeakness": [
+        0.399,
+        0.414,
+        0.36,
+        0.334,
+        0.379
+      ]
+    },
+    {
+      "poseId": "pointing",
+      "category": "basic",
+      "difficulty": 1,
+      "passed": true,
+      "score": 78,
+      "timeMs": 6045,
+      "levelAfter": 1,
+      "fingerWeakness": [
+        0.399,
+        0.39,
+        0.36,
+        0.334,
+        0.379
+      ]
+    },
+    {
+      "poseId": "peace",
+      "category": "finger_control",
+      "difficulty": 2,
+      "passed": true,
+      "score": 88,
+      "timeMs": 1476,
+      "levelAfter": 2,
+      "fingerWeakness": [
+        0.399,
+        0.343,
+        0.403,
+        0.334,
+        0.379
+      ]
+    },
+    {
+      "poseId": "thumbs_up",
+      "category": "basic",
+      "difficulty": 1,
+      "passed": true,
+      "score": 86,
+      "timeMs": 10796,
+      "levelAfter": 3,
+      "fingerWeakness": [
+        0.382,
+        0.343,
+        0.403,
+        0.334,
+        0.379
+      ]
+    },
+    {
+      "poseId": "double_peace",
+      "category": "advanced",
+      "difficulty": 3,
+      "passed": true,
+      "score": 88,
+      "timeMs": 2736,
+      "levelAfter": 3,
+      "fingerWeakness": [
+        0.382,
+        0.279,
+        0.32,
+        0.334,
+        0.379
+      ]
+    },
+    {
+      "poseId": "open_palm",
+      "category": "basic",
+      "difficulty": 1,
+      "passed": true,
+      "score": 77,
+      "timeMs": 2319,
+      "levelAfter": 3,
+      "fingerWeakness": [
+        0.34,
+        0.25,
+        0.306,
+        0.338,
+        0.387
+      ]
+    },
+    {
+      "poseId": "fist",
+      "category": "basic",
+      "difficulty": 1,
+      "passed": true,
+      "score": 87,
+      "timeMs": 14832,
+      "levelAfter": 3,
+      "fingerWeakness": [
+        0.324,
+        0.22,
+        0.259,
+        0.28,
+        0.306
+      ]
+    },
+    {
+      "poseId": "thumbs_up",
+      "category": "basic",
+      "difficulty": 1,
+      "passed": true,
+      "score": 75,
+      "timeMs": 1564,
+      "levelAfter": 3,
+      "fingerWeakness": [
+        0.331,
+        0.22,
+        0.259,
+        0.28,
+        0.306
+      ]
+    },
+    {
+      "poseId": "double_open",
+      "category": "two_hand",
+      "difficulty": 2,
+      "passed": true,
+      "score": 93,
+      "timeMs": 1731,
+      "levelAfter": 3,
+      "fingerWeakness": [
+        0.278,
+        0.183,
+        0.213,
+        0.236,
+        0.252
+      ]
+    },
+    {
+      "poseId": "open_palm",
+      "category": "basic",
+      "difficulty": 1,
+      "passed": true,
+      "score": 93,
+      "timeMs": 533,
+      "levelAfter": 3,
+      "fingerWeakness": [
+        0.213,
+        0.138,
+        0.165,
+        0.182,
+        0.238
+      ]
+    },
+    {
+      "poseId": "rock",
+      "category": "finger_control",
+      "difficulty": 2,
+      "passed": false,
+      "score": 18,
+      "timeMs": 15022,
+      "levelAfter": 3,
+      "fingerWeakness": [
+        0.213,
+        0.391,
+        0.165,
+        0.182,
+        0.378
+      ]
+    },
+    {
+      "poseId": "pointing",
+      "category": "basic",
+      "difficulty": 1,
+      "passed": true,
+      "score": 80,
+      "timeMs": 3538,
+      "levelAfter": 3,
+      "fingerWeakness": [
+        0.213,
+        0.318,
+        0.165,
+        0.182,
+        0.378
+      ]
+    },
+    {
+      "poseId": "double_point",
+      "category": "advanced",
+      "difficulty": 3,
+      "passed": true,
+      "score": 82,
+      "timeMs": 2317,
+      "levelAfter": 3,
+      "fingerWeakness": [
+        0.213,
+        0.304,
+        0.165,
+        0.182,
+        0.378
+      ]
+    },
+    {
+      "poseId": "four_up",
+      "category": "finger_control",
+      "difficulty": 2,
+      "passed": true,
+      "score": 80,
+      "timeMs": 2286,
+      "levelAfter": 3,
+      "fingerWeakness": [
+        0.213,
+        0.263,
+        0.169,
+        0.168,
+        0.391
+      ]
+    },
+    {
+      "poseId": "rock",
+      "category": "finger_control",
+      "difficulty": 2,
+      "passed": true,
+      "score": 86,
+      "timeMs": 7532,
+      "levelAfter": 3,
+      "fingerWeakness": [
+        0.213,
+        0.255,
+        0.169,
+        0.168,
+        0.323
+      ]
+    },
+    {
+      "poseId": "pointing",
+      "category": "basic",
+      "difficulty": 1,
+      "passed": true,
+      "score": 89,
+      "timeMs": 3351,
+      "levelAfter": 3,
+      "fingerWeakness": [
+        0.213,
+        0.242,
+        0.169,
+        0.168,
+        0.323
+      ]
+    },
+    {
+      "poseId": "double_point",
+      "category": "advanced",
+      "difficulty": 3,
+      "passed": false,
+      "score": 0,
+      "timeMs": 15029,
+      "levelAfter": 3,
+      "fingerWeakness": [
+        0.213,
+        0.47,
+        0.169,
+        0.168,
+        0.323
+      ]
+    }
+  ]
+}
