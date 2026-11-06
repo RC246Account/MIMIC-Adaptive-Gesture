@@ -27,18 +27,25 @@ import {
   processFrame,
   state,
   metrics,
-  buildSummary,
 } from "./game/gameController.js";
-import { buildLevels, flatLevels, unlockedPoses } from "./game/campaign.js";
+import {
+  buildLevels,
+  flatLevels,
+  unlockedPoses,
+  allCleared,
+} from "./game/campaign.js";
 import { drawLiveHands, drawTarget } from "./ui/skeletonRenderer.js";
-import { initTrail, startTrail, stopTrail } from "./ui/cursorTrail.js";
 import { loadSettings, saveSettings } from "./settings.js";
 import * as ui from "./ui/interface.js";
 import * as sound from "./ui/sound.js";
 
 // Developer tools (pose capture) only appear with `npm run dev` or ?dev=1.
+const isLocalhost = ["localhost", "127.0.0.1", "[::1]"].includes(
+  location.hostname,
+);
 const DEV =
-  import.meta.env.DEV || new URLSearchParams(location.search).has("dev");
+  import.meta.env.DEV ||
+  (isLocalhost && new URLSearchParams(location.search).has("dev"));
 
 const $ = (id) => document.getElementById(id);
 const video = $("video");
@@ -59,7 +66,6 @@ let currentLevel = null;
 let captureState = null;
 let calibState = null;
 let afterCalib = null;
-let askedCalib = false;
 let lastRoundId = -1;
 let lastVideoTime = -1;
 let lastTs = 0;
@@ -69,6 +75,29 @@ let lastLive = 0;
 
 const viewProfile = () => state.profile || loadProfile() || createProfile();
 const openPalm = () => poses.find((p) => p.id === "open_palm" && p.hands);
+// both hands must be calibrated (left, then right) before Campaign / Arcade / Practice
+const calibrated = () => !!(calib && calib.Left && calib.Right);
+const needsCalib = () => !!openPalm() && !calibrated();
+// Arcade / Practice need at least one cleared campaign level
+const hasCleared = () => unlockedPoses(tiers, viewProfile()).length > 0;
+
+function updateModeLocks() {
+  const cleared = hasCleared();
+  $("mode-arcade").classList.toggle("locked", !cleared);
+  $("mode-practice").classList.toggle("locked", !cleared);
+  $("modes-note").textContent = needsCalib()
+    ? "First, calibrate: left hand, then right hand. Tap any mode to start."
+    : !cleared
+      ? "Arcade and Practice unlock after you clear one campaign level."
+      : "";
+}
+
+// run fn once both hands are calibrated (starts the calibration first if needed)
+function gateCalibration(fn) {
+  if (!needsCalib()) return fn();
+  afterCalib = fn;
+  enterPlay("calibrate");
+}
 // a pose's name is shown only after it has been passed once
 const revealed = (pose) => !!viewProfile().completed[pose.id];
 
@@ -78,12 +107,9 @@ function show(name) {
   document
     .querySelectorAll(".screen")
     .forEach((s) => s.classList.toggle("active", s.id === `screen-${name}`));
-  if (name === "play") {
-    stopTrail(); // no cursor effect while the camera game runs (saves CPU)
-    requestAnimationFrame(fitStage);
-  } else {
-    startTrail();
-  }
+  if (name === "play") requestAnimationFrame(fitStage);
+  if (name === "modes") updateModeLocks();
+  clearResetCount(); // leaving / changing screen breaks the reset click streak
 }
 
 document.querySelectorAll("[data-back]").forEach((b) => {
@@ -127,15 +153,34 @@ function updateToggles() {
 }
 
 async function setCamera(on) {
+  // always release the old stream first, so the browser camera light really turns off
+  if (stream) stream.getTracks().forEach((t) => t.stop());
+  stream = null;
+  video.srcObject = null;
+  camOn = false;
   if (on) {
     try {
+      // Every time the camera is switched ON we ask the browser for camera permission again.
+      // getUserMedia IS the permission request: it shows the prompt if access is not granted yet.
+      const big = window.innerWidth >= CONFIG.BIG_SCREEN_PX;
       stream = await navigator.mediaDevices.getUserMedia({
         video: {
-          width: { ideal: CONFIG.CAMERA_W },
-          height: { ideal: CONFIG.CAMERA_H },
+          width: { ideal: big ? CONFIG.CAMERA_W_BIG : CONFIG.CAMERA_W },
+          height: { ideal: big ? CONFIG.CAMERA_H_BIG : CONFIG.CAMERA_H },
           facingMode: "user",
         },
         audio: false,
+      });
+      // permission removed in the browser (or camera taken by another app) while playing
+      stream.getVideoTracks().forEach((t) => {
+        t.onended = () => {
+          camOn = false;
+          stream = null;
+          settings.camera = false;
+          saveSettings(settings);
+          updateToggles();
+          ui.toast("Camera stopped. Check the browser camera permission.");
+        };
       });
       video.srcObject = stream;
       await video.play();
@@ -146,14 +191,15 @@ async function setCamera(on) {
       fitStage();
     } catch (e) {
       console.error(e);
+      if (stream) stream.getTracks().forEach((t) => t.stop());
+      stream = null;
       camOn = false;
-      ui.toast("Camera blocked or unavailable (needs HTTPS or localhost).");
+      ui.toast(
+        e && e.name === "NotAllowedError"
+          ? "Camera permission denied. Allow the camera in the browser's site settings, then turn Camera ON again."
+          : "Camera unavailable (needs HTTPS or localhost).",
+      );
     }
-  } else {
-    if (stream) stream.getTracks().forEach((t) => t.stop());
-    stream = null;
-    video.srcObject = null;
-    camOn = false;
   }
   settings.camera = camOn; // remembered for next time
   saveSettings(settings);
@@ -172,32 +218,53 @@ $("btn-sound").onclick = () => {
   if (settings.sound) sound.success();
 };
 
-// reset progress: 20 successive clicks (each within RESET_GAP_MS of the previous one)
+// reset progress: 20 successive clicks. Each click must come within RESET_GAP_MS of the previous
+// one, and clicking anything else in between starts the count again from zero.
 let resetClicks = 0;
+let resetLast = 0;
 let resetTimer = 0;
 function setResetLabel() {
   $("btn-reset").textContent = resetClicks
     ? `Reset progress (${resetClicks}/${CONFIG.RESET_CLICKS})`
     : "Reset progress";
 }
+function clearResetCount() {
+  clearTimeout(resetTimer);
+  resetClicks = 0;
+  setResetLabel();
+}
 $("btn-reset").onclick = () => {
-  resetClicks++;
+  const now = performance.now();
+  resetClicks = now - resetLast <= CONFIG.RESET_GAP_MS ? resetClicks + 1 : 1;
+  resetLast = now;
   clearTimeout(resetTimer);
   if (resetClicks >= CONFIG.RESET_CLICKS) {
-    resetClicks = 0;
+    clearResetCount();
     stopGame();
     resetProgress();
     state.score = null;
     rebuildLevels(); // levels refresh: everything is locked again except level 1
+    updateModeLocks();
     ui.toast("Progress reset. Levels refreshed.");
-  } else {
-    resetTimer = setTimeout(() => {
-      resetClicks = 0;
-      setResetLabel();
-    }, CONFIG.RESET_GAP_MS);
+    return;
   }
+  resetTimer = setTimeout(clearResetCount, CONFIG.RESET_GAP_MS);
   setResetLabel();
 };
+// a click on anything other than the reset button breaks the streak of clicks
+document.addEventListener(
+  "pointerdown",
+  (e) => {
+    if (resetClicks && !e.target.closest("#btn-reset")) clearResetCount();
+  },
+  true,
+);
+
+// click sound on every enabled button (only plays when Sound is ON)
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("button");
+  if (b && !b.disabled && b.id !== "btn-sound") sound.click();
+});
 
 // ---------- home / modes / campaign ----------
 $("btn-start").onclick = () => {
@@ -205,14 +272,19 @@ $("btn-start").onclick = () => {
   rebuildLevels();
   show("modes");
 };
-$("mode-campaign").onclick = () => {
-  rebuildLevels();
-  show("campaign");
-};
-$("mode-arcade").onclick = () => enterPlay("arcade");
-$("mode-practice").onclick = () => enterPlay("practice");
+$("mode-campaign").onclick = () =>
+  gateCalibration(() => {
+    rebuildLevels();
+    show("campaign");
+  });
+function openIfCleared(mode) {
+  if (!hasCleared())
+    return ui.toast("Clear at least one campaign level first.");
+  enterPlay(mode);
+}
+$("mode-arcade").onclick = () => openIfCleared("arcade");
+$("mode-practice").onclick = () => openIfCleared("practice");
 $("btn-calibrate").onclick = () => {
-  askedCalib = true;
   afterCalib = null;
   enterPlay("calibrate");
 };
@@ -228,14 +300,8 @@ async function enterPlay(mode, opts = {}) {
   if (!modelReady) return ui.toast("Hand model is still loading...");
   if (!camOn) await setCamera(true);
   if (!camOn) return;
-  // first game ever: calibrate the fingers first (Back = skip)
-  if (
-    !["calibrate", "dev"].includes(mode) &&
-    !calib &&
-    !askedCalib &&
-    openPalm()
-  ) {
-    askedCalib = true;
+  // both hands must be calibrated (left, then right) before any game mode
+  if (!["calibrate", "dev"].includes(mode) && needsCalib()) {
     afterCalib = () => enterPlay(mode, opts);
     return enterPlay("calibrate");
   }
@@ -257,9 +323,16 @@ async function enterPlay(mode, opts = {}) {
     ui.setTargetInfo(null);
     ui.setHandHint(null);
     ui.setStatus("");
-    ui.setAgentMessage(
-      "Show an OPEN PALM to the camera, fingers spread. Hold still.",
-    );
+    ui.setAgentMessage(calibMessage(0));
+    calibState = {
+      step: 0, // 0 = first hand (LEFT), 1 = second hand (RIGHT)
+      good: 0,
+      lens: [],
+      labels: [],
+      firstLabel: null,
+      factors: {},
+      done: false,
+    };
     calibState = { good: 0, lens: [], done: false };
     drawTarget(targetCanvas, openPalm(), 0);
     return;
@@ -275,7 +348,8 @@ async function enterPlay(mode, opts = {}) {
   const r = startSession(poses, {
     mode,
     pose: opts.pose,
-    pool: unlockedPoses(tiers, prof),
+    pool: unlockedPoses(tiers, prof), // cleared levels only (names already revealed)
+    streakMode: allCleared(tiers, prof), // streak only counts once every level is cleared
   });
   if (!r.ok) {
     ui.toast(r.error);
@@ -320,7 +394,7 @@ $("btn-play-back").onclick = leavePlay;
 
 function refreshSide() {
   const prof = viewProfile();
-  ui.renderProgress(prof, state.score);
+  ui.renderProgress(prof, state.score, state.streakMode);
   ui.renderWeak(prof);
 }
 
@@ -328,14 +402,17 @@ function refreshSide() {
 function toDetected(res) {
   const vw = video.videoWidth;
   const vh = video.videoHeight;
-  const list = res.landmarks.map((lm) => {
+  const hd = res.handedness || res.handednesses || [];
+  const list = res.landmarks.map((lm, i) => {
+    const label = (hd[i] && hd[i][0] && hd[i][0].categoryName) || "Left";
     // landmarks are 0..1 per axis; convert to pixels so the hand is not stretched
     const px = lm.map((p) => ({ x: p.x * vw, y: p.y * vh }));
     const base = normalizeHand(px);
     return {
       raw: lm,
       base, // uncalibrated (used when the developer captures poses)
-      norm: applyCalibration(base, calib), // calibrated (used for matching)
+      norm: applyCalibration(base, calib && calib[label]), // this hand's calibration
+      label, // tracker's own "Left" / "Right" label (calibration is saved under it)
       wristX: lm[0].x,
     };
   });
@@ -393,7 +470,11 @@ function loop() {
 function newRound() {
   lastRoundId = state.roundId;
   lastTickSec = null;
-  ui.setTargetInfo(state.current, revealed(state.current));
+  // arcade / practice only use cleared poses, so their names are always shown (no "?????")
+  ui.setTargetInfo(
+    state.current,
+    state.mode !== "campaign" || revealed(state.current),
+  );
   ui.setHandHint(state.current);
   ui.setAgentMessage(state.message);
   ui.flashResult("", true);
@@ -450,10 +531,11 @@ $("end-levels").onclick = leavePlay;
 // ---------- practice ----------
 $("prac-prev").onclick = () => stepPractice(-1);
 $("prac-next").onclick = () => stepPractice(1);
-$("btn-log").onclick = () =>
-  ui.downloadJSON("mimic_session.json", buildSummary());
 
-// ---------- finger calibration ----------
+// ---------- finger calibration (left hand first, then right hand) ----------
+const calibMessage = (step) =>
+  `Calibration ${step + 1}/2: show your ${step === 0 ? "LEFT" : "RIGHT"} hand, OPEN PALM, fingers spread. Hold still.`;
+
 function handleCalibration(detected) {
   const cs = calibState;
   const open = openPalm();
@@ -461,6 +543,7 @@ function handleCalibration(detected) {
   // best open-palm match among visible hands (uncalibrated)
   let best = null;
   for (const d of detected) {
+    if (cs.step === 1 && d.label === cs.firstLabel) continue; // 2nd step must be the other hand
     const r = comparePose(open, [{ norm: d.base }]);
     if (r.tracked && (!best || r.score > best.score))
       best = { score: r.score, d };
@@ -468,6 +551,7 @@ function handleCalibration(detected) {
   if (best && best.score >= CONFIG.CALIB_MIN_SCORE) {
     cs.good++;
     cs.lens.push(fingerLengths(best.d.base));
+    cs.labels.push(best.d.label);
   } else {
     cs.good = Math.max(0, cs.good - 2);
   }
@@ -476,15 +560,36 @@ function handleCalibration(detected) {
   ui.setScore(best ? { tracked: true, score: best.score } : null);
   if (cs.good < CONFIG.CALIB_FRAMES) return;
 
-  cs.done = true;
-  const player = meanLengths(cs.lens.slice(-CONFIG.CALIB_FRAMES));
-  calib = computeFactors(fingerLengths(open.hands[0]), player);
-  saveCalibration(calib);
-  sound.success();
-  ui.flashResult("Calibrated!", true);
-  ui.setAgentMessage(
-    `Finger scale: ${calib.map((f) => f.toFixed(2)).join("  ")}`,
+  const lens = cs.lens.slice(-CONFIG.CALIB_FRAMES);
+  const labels = cs.labels.slice(-CONFIG.CALIB_FRAMES);
+  const label =
+    labels.filter((l) => l === "Left").length * 2 >= labels.length
+      ? "Left"
+      : "Right";
+  cs.factors[label] = computeFactors(
+    fingerLengths(open.hands[0]),
+    meanLengths(lens),
   );
+  sound.success();
+
+  if (cs.step === 0) {
+    // first hand saved, now ask for the other one
+    cs.firstLabel = label;
+    cs.step = 1;
+    cs.good = 0;
+    cs.lens = [];
+    cs.labels = [];
+    ui.setHold(0);
+    ui.flashResult("First hand done!", true);
+    ui.setAgentMessage(calibMessage(1));
+    return;
+  }
+
+  cs.done = true;
+  calib = cs.factors; // { Left: [...], Right: [...] }
+  saveCalibration(calib);
+  ui.flashResult("Both hands calibrated!", true);
+  ui.setAgentMessage("Calibration saved for both hands.");
   const go = afterCalib;
   afterCalib = null;
   setTimeout(() => {
@@ -565,8 +670,6 @@ function handleCapture(detected, now) {
 
 // ---------- boot ----------
 async function boot() {
-  initTrail($("bg"));
-  startTrail();
   sound.setMuted(!settings.sound);
   window.addEventListener("pointerdown", () => sound.unlockAudio(), {
     once: true,
@@ -580,6 +683,7 @@ async function boot() {
     poses = await loadPoses(poseMeta, DEV);
     modelReady = true;
     rebuildLevels();
+    updateModeLocks();
     const n = poses.filter((p) => p.hands).length;
     ui.setHomeStatus(`Ready. ${n} poses loaded.`);
   } catch (e) {

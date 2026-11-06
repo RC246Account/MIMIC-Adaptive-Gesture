@@ -33,4 +33,7 @@ export const CONFIG = {
   CALIB_MAX: 1.3,
   CAMERA_W: 640, // lower camera resolution = lighter on weak phones
   CAMERA_H: 480,
+  CAMERA_W_BIG: 1280, // used on wide windows (PC / tablet) so the camera looks sharp
+  CAMERA_H_BIG: 720,
+  BIG_SCREEN_PX: 900,
 };

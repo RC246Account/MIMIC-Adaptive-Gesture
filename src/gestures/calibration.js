@@ -7,7 +7,7 @@
 // from its base joint by that factor before matching.
 import { CONFIG } from "../config.js";
 
-const KEY = "mimic_calib_v1";
+const KEY = "mimic_calib_v2";
 // finger chains: base joint first, tip last (thumb, index, middle, ring, pinky)
 const FINGERS = [
   [1, 2, 3, 4],
@@ -59,11 +59,13 @@ export function applyCalibration(hand, factors) {
   });
   return out;
 }
-
+// V4: one set of factors per hand, saved as { Left: [5 numbers], Right: [5 numbers] }.
+// The keys are MediaPipe's own hand labels, so they match whatever label the tracker gives later.
 export function loadCalibration() {
   try {
     const f = JSON.parse(localStorage.getItem(KEY));
-    return Array.isArray(f) && f.length === 5 ? f : null;
+    const ok = (a) => Array.isArray(a) && a.length === 5;
+    return f && ok(f.Left) && ok(f.Right) ? f : null;
   } catch {
     return null;
   }

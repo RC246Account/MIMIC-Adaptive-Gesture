@@ -37,6 +37,7 @@ export const state = {
   finished: false, // campaign: round over, waiting for Retry / Next
   practiceIdx: 0,
   recentPF: [],
+  streakMode: false,
 };
 
 // campaign: base time of the pose | arcade: a bit shorter | practice: no timer
@@ -51,10 +52,11 @@ export function timeLimitFor(pose, mode) {
 // campaign: pass the level's pose. arcade/practice: pass the pool of unlocked poses.
 export function startSession(
   allPoses,
-  { mode = "campaign", pose = null, pool = [] } = {},
+  { mode = "campaign", pose = null, pool = [], streakMode = false } = {},
 ) {
   state.profile = loadProfile() || createProfile();
   state.mode = mode;
+  state.streakMode = streakMode; // streak counts only when all levels are cleared
   const ok = (p) => p.hands && p.hands.length === p.handsRequired;
   state.pool =
     mode === "campaign" ? (pose && ok(pose) ? [pose] : []) : pool.filter(ok);
@@ -168,8 +170,7 @@ function finishRound(passed, now) {
   const firstClear = passed && !state.profile.completed[state.current.id];
   if (passed) state.profile.completed[state.current.id] = true;
   if (state.mode !== "practice") awardPoints(state.profile, points, false);
-  addResult(state.score, passed, points);
-
+  addResult(state.score, passed, points, state.streakMode);
   metrics.rounds.push({
     mode: state.mode,
     poseId: state.current.id,

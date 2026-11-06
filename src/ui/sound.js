@@ -43,6 +43,7 @@ export const success = () => {
   beep(880, 0.1, "triangle", 0.1, 0.1);
   beep(1175, 0.18, "triangle", 0.1, 0.2);
 };
+export const click = () => beep(520, 0.05, "sine", 0.07);
 export const fail = () => beep(170, 0.35, "sawtooth", 0.07);
 export const levelUp = () => {
   [523, 659, 784, 1046].forEach((f, i) =>

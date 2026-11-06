@@ -26,9 +26,16 @@ export function levelState(tiers, profile, lv) {
   return { open, done };
 }
 
-// Poses that Arcade / Practice may use = the unlocked levels' poses.
+// Poses that Arcade / Practice may use = only levels already CLEARED (their names are revealed,
+// so no "?????" poses). No cleared level yet = empty list = Arcade/Practice stay locked.
 export function unlockedPoses(tiers, profile) {
   return flatLevels(tiers)
-    .filter((lv) => levelState(tiers, profile, lv).open)
+    .filter((lv) => profile.completed[lv.pose.id])
     .map((lv) => lv.pose);
+}
+
+// Streak mode turns on only when EVERY level is cleared.
+export function allCleared(tiers, profile) {
+  const flat = flatLevels(tiers);
+  return flat.length > 0 && flat.every((lv) => profile.completed[lv.pose.id]);
 }

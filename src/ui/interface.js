@@ -100,9 +100,15 @@ export function renderWeak(profile) {
     .join("");
 }
 
-export function renderProgress(profile, session) {
+export function renderProgress(profile, session, streakOn = false) {
   $("points").textContent = profile.totalPoints;
-  $("streak").textContent = session ? session.streak : 0;
+  // streak mode only unlocks when every campaign level is cleared
+  $("streak").textContent = streakOn
+    ? session
+      ? session.streak
+      : 0
+    : "locked";
+  $("streak").title = streakOn ? "" : "Clear all levels to unlock streak mode";
   $("accuracy").textContent =
     session && session.attempts
       ? `${Math.round((100 * session.passes) / session.attempts)}%`

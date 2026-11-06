@@ -31,6 +31,7 @@ button.toggle { min-width: 140px; opacity: 0.75; }
 button.toggle.on { opacity: 1; border-color: var(--green); color: var(--green); }
 button.ghost { background: transparent; border-color: #1c2a4a; font-size: 0.8rem; opacity: 0.8; }
 button.back { align-self: flex-start; padding: 8px 12px; }
+button.big.locked { opacity: 0.4; border-style: dashed; }
 .screen:not(#screen-play) > .back { position: absolute; top: calc(10px + env(safe-area-inset-top)); left: 12px; }
 
 /* campaign levels */
@@ -46,7 +47,7 @@ button.back { align-self: flex-start; padding: 8px 12px; }
 .lv-label { font-size: 0.72rem; margin-top: 4px; color: var(--green); }
 
 /* play screen */
-#screen-play { justify-content: flex-start; align-items: stretch; gap: 8px; padding: calc(6px + env(safe-area-inset-top)) 8px calc(6px + env(safe-area-inset-bottom)); overflow: hidden; }
+#screen-play { max-width: none; justify-content: flex-start; align-items: stretch; gap: 8px; padding: calc(6px + env(safe-area-inset-top)) 8px calc(6px + env(safe-area-inset-bottom)); overflow: hidden; }
 .play-top { display: flex; align-items: center; gap: 10px; }
 #play-title { font-weight: 800; letter-spacing: 0.15em; color: var(--cyan); }
 #play-status { margin-left: auto; }
@@ -54,10 +55,16 @@ button.back { align-self: flex-start; padding: 8px 12px; }
 @media (orientation: landscape) {
   .play-layout { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
 }
+@media (orientation: landscape) and (min-width: 900px) {
+  .play-layout { grid-template-columns: minmax(0, 2.4fr) minmax(300px, 1fr); }
+}
+@media (orientation: portrait) and (min-width: 700px) {
+  .play-layout { grid-template-rows: minmax(0, 68fr) minmax(0, 32fr); }
+}
 #stage-wrap { min-width: 0; min-height: 0; display: flex; align-items: center; justify-content: center; }
 #stage { position: relative; width: 100%; aspect-ratio: 4 / 3; background: #000; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
 #video, #overlay { position: absolute; inset: 0; width: 100%; height: 100%; transform: scaleX(-1); }
-#target-canvas { position: absolute; left: 50%; top: 52%; width: min(78%, 460px); transform: translate(-50%, -50%); pointer-events: none; opacity: 0.92; }
+#target-canvas { position: absolute; left: 50%; top: 52%; width: min(78%, 820px); transform: translate(-50%, -50%); pointer-events: none; opacity: 0.92; }
 #time-track { position: absolute; top: 0; left: 0; right: 0; height: 9px; background: rgba(0,0,0,0.55); }
 #time-fill { height: 100%; width: 100%; background: var(--cyan); transition: width 0.1s linear; }
 #time-fill.low { background: var(--red); }
