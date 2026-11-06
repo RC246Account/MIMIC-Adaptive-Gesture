@@ -325,7 +325,7 @@ async function enterPlay(mode, opts = {}) {
     ui.setStatus("");
     ui.setAgentMessage(calibMessage(0));
     calibState = {
-      step: 0, // 0 = first hand (LEFT), 1 = second hand (RIGHT)
+      step: 0, // 0 = first hand, 1 = second hand
       good: 0,
       lens: [],
       labels: [],
@@ -333,7 +333,6 @@ async function enterPlay(mode, opts = {}) {
       factors: {},
       done: false,
     };
-    calibState = { good: 0, lens: [], done: false };
     drawTarget(targetCanvas, openPalm(), 0);
     return;
   }
@@ -534,7 +533,9 @@ $("prac-next").onclick = () => stepPractice(1);
 
 // ---------- finger calibration (left hand first, then right hand) ----------
 const calibMessage = (step) =>
-  `Calibration ${step + 1}/2: show your ${step === 0 ? "LEFT" : "RIGHT"} hand, OPEN PALM, fingers spread. Hold still.`;
+  step === 0
+    ? "Calibration 1/2: show ONE hand, OPEN PALM, fingers spread. Hold still."
+    : "Calibration 2/2: now show your OTHER hand, OPEN PALM, fingers spread. Hold still.";
 
 function handleCalibration(detected) {
   const cs = calibState;

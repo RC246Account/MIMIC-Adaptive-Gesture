@@ -185,12 +185,12 @@ export const poseMeta = [
     fingerDemand: [0.3, 0.3, 0.3, 1.0, 1.0],
   },
   {
-    id: "double_rock",
-    name: "Both Rock Signs",
+    id: "double_claws",
+    name: "Both Claws",
     category: "advanced",
-    difficulty: 4,
+    difficulty: 3,
     handsRequired: 2,
-    fingerDemand: [0.2, 1.0, 0.2, 0.2, 1.0],
+    fingerDemand: [0.7, 1.0, 1.0, 1.0, 1.0],
   },
   {
     id: "peace_fist",
