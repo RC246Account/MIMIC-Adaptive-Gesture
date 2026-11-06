@@ -35,11 +35,18 @@ export async function loadPoses(meta, useLocal = false) {
   const local = useLocal ? readLocal() : {};
   return meta.map((m) => {
     const e = local[m.id] || shipped[m.id];
-    const ok = e && Array.isArray(e.hands);
+    // V3: accept both formats. v1 file = plain array of hands, v2 = { hands, hand }
+    const hands = Array.isArray(e)
+      ? e
+      : e && Array.isArray(e.hands)
+        ? e.hands
+        : null;
+    const hand = e && !Array.isArray(e) ? e.hand || null : null;
+    const ok = hands && hands.length === m.handsRequired;
     return {
       ...m,
-      hands: ok ? e.hands : null,
-      hand: ok ? e.hand || null : null,
+      hands: ok ? hands : null,
+      hand: ok ? hand : null,
     };
   });
 }

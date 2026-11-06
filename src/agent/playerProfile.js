@@ -12,6 +12,7 @@ export function createProfile() {
     totalPoints: 0,
     history: [], // one entry per finished round (last 300)
     poseStats: {}, // id -> { attempts, passes, bestScore, scoreSum }
+    completed: {}, // V3: poseId -> true once passed (unlocks next campaign level, reveals the name)
   };
 }
 
@@ -88,8 +89,15 @@ export function loadProfile() {
   try {
     const p = JSON.parse(localStorage.getItem(KEY));
     // basic shape check so a broken save never crashes the game
-    if (p && Array.isArray(p.fingerWeakness) && p.unlockedLevel && p.poseStats)
+    if (
+      p &&
+      Array.isArray(p.fingerWeakness) &&
+      p.unlockedLevel &&
+      p.poseStats
+    ) {
+      p.completed = p.completed || {}; // V3: older saves have no "completed"
       return p;
+    }
     return null;
   } catch {
     return null;

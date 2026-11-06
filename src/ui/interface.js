@@ -1,19 +1,34 @@
 import { FINGER_NAMES, weakestFingers } from "../agent/playerProfile.js";
 import { CONFIG } from "../config.js";
-import { drawTarget, drawLocked } from "./skeletonRenderer.js";
+import { levelState } from "../game/campaign.js";
 
 const $ = (id) => document.getElementById(id);
 
-export const setStatus = (t) => ($("status").textContent = t);
+export const setHomeStatus = (t) => ($("home-status").textContent = t);
+export const setStatus = (t) => ($("play-status").textContent = t);
 export const setAgentMessage = (t) => ($("agent-message").textContent = t);
 
-export function setTargetInfo(pose) {
-  $("target-name").textContent = pose
-    ? `${pose.name}  (level ${pose.difficulty})`
-    : "Press Start";
+let toastTimer = 0;
+export function toast(text) {
+  const el = $("toast");
+  el.textContent = text;
+  el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("show"), 2200);
 }
 
-// Suggested hand for the pose (from the "hand" the developer used when capturing it)
+// Show only the elements whose data-show list contains the current play mode.
+export function applyModeVisibility(mode) {
+  document.querySelectorAll("#screen-play [data-show]").forEach((el) => {
+    el.hidden = !el.dataset.show.split(" ").includes(mode);
+  });
+}
+
+// reveal = true -> real name; otherwise "?????" (name is discovered after the first pass)
+export function setTargetInfo(pose, reveal) {
+  $("target-name").textContent = pose ? (reveal ? pose.name : "?????") : "";
+}
+
 export function setHandHint(pose) {
   const el = $("hand-hint");
   if (!pose) return (el.textContent = "");
@@ -24,11 +39,13 @@ export function setHandHint(pose) {
 }
 
 export function setScore(out) {
-  $("score-value").textContent =
+  const chip = $("score-value");
+  chip.textContent =
     out && out.tracked ? `${Math.round(out.score)}%` : "no hands";
+  $("score-chip").className =
+    out && out.tracked && out.score >= CONFIG.PASS_SCORE ? "good" : "";
 }
 
-// frac 1 = full time left, 0 = out of time
 export function setTime(frac) {
   const f = $("time-fill");
   f.style.width = `${Math.max(0, Math.min(1, frac)) * 100}%`;
@@ -43,118 +60,90 @@ export function flashResult(text, ok) {
   el.className = ok ? "ok" : "bad";
 }
 
-export function renderProgress(profile, session, mode) {
-  $("level").textContent = profile.unlockedLevel;
+// ---------- live per-finger similarity (guides the player) ----------
+export function renderLive(perFinger) {
+  const box = $("live-bars");
+  if (!box.children.length) {
+    box.innerHTML = FINGER_NAMES.map(
+      (n) =>
+        `<div class="frow"><span>${n}</span><div class="bar"><div class="fill"></div></div><b>--</b></div>`,
+    ).join("");
+  }
+  FINGER_NAMES.forEach((_, i) => {
+    const row = box.children[i];
+    const fill = row.querySelector(".fill");
+    const val = row.querySelector("b");
+    if (!perFinger) {
+      fill.style.width = "0%";
+      val.textContent = "--";
+      return;
+    }
+    const pct = Math.round(100 * Math.max(0, 1 - perFinger[i] / CONFIG.K));
+    fill.style.width = `${pct}%`;
+    fill.className = "fill " + (pct >= CONFIG.PASS_SCORE ? "green" : "amber");
+    val.textContent = `${pct}%`;
+  });
+}
+
+// ---------- long-term stats (agent's estimate of finger weakness) ----------
+export function renderWeak(profile) {
+  const weak = weakestFingers(profile, 2);
+  const has = profile.history.length > 0;
+  $("weak-text").textContent = has
+    ? `Weakest now: ${weak.map((w) => w.name).join(" and ")}. The agent picks poses that train them.`
+    : "Play a few rounds and the agent will learn which fingers need work.";
+  $("weak-bars").innerHTML = profile.fingerWeakness
+    .map(
+      (w, i) =>
+        `<div class="frow"><span>${FINGER_NAMES[i]}</span><div class="bar"><div class="fill amber" style="width:${Math.round(w * 100)}%"></div></div><b>${Math.round(w * 100)}%</b></div>`,
+    )
+    .join("");
+}
+
+export function renderProgress(profile, session) {
   $("points").textContent = profile.totalPoints;
   $("streak").textContent = session ? session.streak : 0;
   $("accuracy").textContent =
     session && session.attempts
       ? `${Math.round((100 * session.passes) / session.attempts)}%`
       : "--";
-  const need = CONFIG.LEVEL_UP_POINTS[profile.unlockedLevel - 1];
-  const maxed = profile.unlockedLevel >= CONFIG.MAX_LEVEL;
-  $("level-fill").style.width = maxed
-    ? "100%"
-    : `${Math.min(100, (profile.levelPoints / need) * 100)}%`;
-  $("level-label").textContent = maxed
-    ? "Max level"
-    : `${profile.levelPoints}/${need} to level ${profile.unlockedLevel + 1}`;
+  $("cleared").textContent = Object.keys(profile.completed).length;
 }
 
-export function fillLevelSelect(unlocked) {
-  const sel = $("level-select");
-  const keep = sel.value;
-  sel.innerHTML = "";
-  for (let l = 1; l <= unlocked; l++) {
-    const o = document.createElement("option");
-    o.value = l;
-    o.textContent = `Practice levels 1-${l}`;
-    sel.appendChild(o);
-  }
-  sel.value = keep && Number(keep) <= unlocked ? keep : String(unlocked);
-}
-
-// ---------- collection ----------
-export function renderCollection(poses, profile, onOpen) {
-  const box = $("collection");
+// ---------- campaign level select ----------
+export function renderTiers(tiers, profile, onPick) {
+  const box = $("tiers");
   box.innerHTML = "";
-  for (const p of poses) {
-    if (!p.hands) continue; // not captured, so not shown to players
-    const locked = p.difficulty > profile.unlockedLevel;
-    const st = profile.poseStats[p.id];
-    const card = document.createElement("button");
-    card.className = "card" + (locked ? " locked" : "");
-    const cv = document.createElement("canvas");
-    cv.width = 160;
-    cv.height = 120;
-    if (locked) drawLocked(cv, `Lv ${p.difficulty}`);
-    else drawTarget(cv, p);
-    const label = document.createElement("div");
-    label.className = "card-label";
-    label.textContent = `${locked ? "?" : p.name}${st && st.passes ? "  \u2605" : ""}`;
-    card.append(cv, label);
-    card.onclick = () => onOpen(p, locked);
-    box.appendChild(card);
+  for (const t of tiers) {
+    if (!t.levels.length) continue;
+    const sec = document.createElement("div");
+    sec.className = `tier tier-${t.id}`;
+    const h = document.createElement("h3");
+    h.textContent = t.label;
+    const row = document.createElement("div");
+    row.className = "lv-row";
+    for (const lv of t.levels) {
+      const { open, done } = levelState(tiers, profile, lv);
+      const cell = document.createElement("div");
+      cell.className = "lv-cell";
+      const b = document.createElement("button");
+      b.className = "lv" + (open ? "" : " locked") + (done ? " done" : "");
+      b.disabled = !open;
+      b.textContent = lv.number;
+      b.onclick = () => onPick(lv);
+      cell.append(b);
+      if (done) {
+        const l = document.createElement("div"); // label only once the level is done
+        l.className = "lv-label";
+        l.textContent = lv.pose.name;
+        cell.append(l);
+      }
+      row.append(cell);
+    }
+    sec.append(h, row);
+    box.append(sec);
   }
-}
-
-export function openPoseModal(pose, stats, locked) {
-  $("modal-title").textContent = locked
-    ? `Locked (reach level ${pose.difficulty})`
-    : pose.name;
-  const cv = $("modal-canvas");
-  if (locked) drawLocked(cv, `Level ${pose.difficulty}`);
-  else drawTarget(cv, pose);
-  if (locked) {
-    $("modal-body").textContent =
-      "Keep earning points in Campaign mode to unlock this pose.";
-  } else {
-    const tested = pose.fingerDemand
-      .map((d, i) => (d >= 0.7 ? FINGER_NAMES[i] : null))
-      .filter(Boolean);
-    const hand =
-      pose.handsRequired === 2
-        ? "Both hands"
-        : pose.hand
-          ? `${pose.hand} hand`
-          : "either hand";
-    const avg =
-      stats && stats.attempts
-        ? Math.round(stats.scoreSum / stats.attempts)
-        : null;
-    $("modal-body").innerHTML =
-      `Level ${pose.difficulty} &middot; ${hand}<br>` +
-      `Fingers that matter: ${tested.length ? tested.join(", ") : "whole hand"}<br>` +
-      (stats && stats.attempts
-        ? `Attempts ${stats.attempts} &middot; Passed ${stats.passes}<br>Best match ${stats.bestScore}% &middot; Average ${avg}%`
-        : "Not attempted yet.");
-  }
-  $("pose-modal").showModal();
-}
-
-// ---------- stats ----------
-export function renderStats(profile, poses) {
-  const weak = weakestFingers(profile, 2);
-  const bars = profile.fingerWeakness
-    .map(
-      (w, i) =>
-        `<div class="frow"><span>${FINGER_NAMES[i]}</span><div class="bar"><div class="fill amber" style="width:${Math.round(w * 100)}%"></div></div></div>`,
-    )
-    .join("");
-  const rows = poses
-    .filter((p) => profile.poseStats[p.id])
-    .map((p) => {
-      const s = profile.poseStats[p.id];
-      return `<tr><td>${p.name}</td><td>${s.attempts}</td><td>${s.passes}</td><td>${s.bestScore}%</td><td>${Math.round(s.scoreSum / s.attempts)}%</td></tr>`;
-    })
-    .join("");
-  const hasData = profile.history.length > 0;
-  $("stats").innerHTML =
-    `<p>${hasData ? `Your weakest fingers right now: ${weak.map((w) => w.name).join(" and ")}. Expect more poses that use them.` : "Play a few rounds and the game will learn which fingers need work."}</p>` +
-    bars +
-    (rows
-      ? `<table><tr><th>Pose</th><th>Tries</th><th>Passed</th><th>Best</th><th>Avg</th></tr>${rows}</table>`
-      : "");
+  if (!box.children.length) box.textContent = "No poses captured yet.";
 }
 
 // ---------- developer capture ----------

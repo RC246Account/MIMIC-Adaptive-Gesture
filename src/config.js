@@ -1,25 +1,36 @@
-// All tunable numbers live here so you can change them in one place
-// and report them in the paper (Methodology, "parameter settings").
-// V2: changed lines keep the old version as an "OLD:" comment.
+// All tunable numbers live here (report them in the paper, "parameter settings").
+// V3: campaign levels = one pose per level, tiers EASY/MEDIUM/HARD, calibration, reset-by-clicks.
 export const CONFIG = {
   K: 0.6, // tolerance in toScore(); bigger = more forgiving
   PASS_SCORE: 75, // minimum similarity (0-100) to count as a match
-  // OLD: HOLD_FRAMES: 10,   // frame-based hold (frame rate differs a lot on phones)
-  HOLD_MS: 700, // pose must stay above PASS_SCORE this long (time-based)
-  // OLD: TIMEOUT_MS: 15000, // one fixed timeout for every pose
-  BASE_TIME_MS: { 1: 6000, 2: 9000, 3: 12000, 4: 14000 }, // easy poses get LESS time
-  LEVEL_PRESSURE: 0.1, // campaign: each level above 1 removes 10% of the time
-  MIN_TIME_MS: 3500, // timer never goes below this
-  PRACTICE_TIME_FACTOR: 1.5, // practice mode is more relaxed
+  HOLD_MS: 700, // pose must stay above PASS_SCORE this long
+  BASE_TIME_MS: { 1: 8000, 2: 10000, 3: 13000, 4: 15000 }, // time limit by pose difficulty
+  ARCADE_TIME_FACTOR: 0.8, // arcade = a little faster than campaign
+  MIN_TIME_MS: 3500,
   TICK_FROM_MS: 5000, // ticking sound starts when this much time is left
-  RESULT_PAUSE_MS: 1200, // pause between rounds so the player can read the result
-  CAPTURE_FRAMES: 30, // frames averaged when saving a target pose (developer)
+  RESULT_PAUSE_MS: 1200, // pause between rounds
+  CAPTURE_FRAMES: 30, // developer capture
   CAPTURE_DELAY_MS: 3000,
-  EPSILON: 0.1, // exploration rate of the agent
-  EMA_ALPHA: 0.3, // how fast finger weakness reacts to new results
-  // OLD: LEVEL_WEIGHT: 1.0,  // ceiling-rule penalty, replaced by the pool filter (difficulty <= level)
-  LEVEL_BONUS: 0.15, // agent: small bonus for poses of the current level (vs review poses)
+  EPSILON: 0.1, // agent exploration rate
+  EMA_ALPHA: 0.3, // finger weakness smoothing
+  LEVEL_BONUS: 0.15, // (used by simulate.js)
   NOVELTY_PENALTY: 0.15, // agent: penalty for a pose seen in the last 3 rounds
-  MAX_LEVEL: 4,
-  LEVEL_UP_POINTS: [300, 400, 500], // campaign points needed to leave level 1, 2, 3
+  MAX_LEVEL: 4, // (used by simulate.js)
+  LEVEL_UP_POINTS: [300, 400, 500], // (used by simulate.js)
+
+  // ---- V3 ----
+  // Campaign tiers. A tier holds every CAPTURED pose whose difficulty is in `diffs`.
+  TIERS: [
+    { id: "easy", label: "EASY", diffs: [1] },
+    { id: "medium", label: "MEDIUM", diffs: [2] },
+    { id: "hard", label: "HARD", diffs: [3, 4] },
+  ],
+  RESET_CLICKS: 20, // successive clicks needed to reset progress
+  RESET_GAP_MS: 2000, // clicks further apart than this restart the count
+  CALIB_FRAMES: 25, // good open-palm frames needed for finger calibration
+  CALIB_MIN_SCORE: 55, // open-palm similarity needed for a frame to count
+  CALIB_MIN: 0.75, // per-finger correction is clamped to this range
+  CALIB_MAX: 1.3,
+  CAMERA_W: 640, // lower camera resolution = lighter on weak phones
+  CAMERA_H: 480,
 };
