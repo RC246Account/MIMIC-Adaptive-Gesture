@@ -25,6 +25,7 @@ import {
   stepPractice,
   resetProgress,
   processFrame,
+  buildSummary,
   state,
   metrics,
 } from "./game/gameController.js";
@@ -250,6 +251,19 @@ $("btn-reset").onclick = () => {
   }
   resetTimer = setTimeout(clearResetCount, CONFIG.RESET_GAP_MS);
   setResetLabel();
+};
+$("btn-export").onclick = () => {
+  const summary = buildSummary();
+  summary.device = {
+    userAgent: navigator.userAgent,
+    screen: `${screen.width}x${screen.height}`,
+    window: `${innerWidth}x${innerHeight}`,
+    cores: navigator.hardwareConcurrency || null,
+    memoryGB: navigator.deviceMemory || null,
+  };
+  const name = `mimic_session_${new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-")}.json`;
+  ui.downloadJSON(name, summary);
+  ui.toast("Session exported");
 };
 // a click on anything other than the reset button breaks the streak of clicks
 document.addEventListener(
